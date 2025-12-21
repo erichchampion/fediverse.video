@@ -52,6 +52,29 @@ class RelationshipBatcher {
   private lastBatchTime = 0;
 
   /**
+   * Create and track a timer
+   */
+  private createTimer(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
+    const timerId = setTimeout(callback, delay);
+    // Use .unref() to prevent timers from keeping the process alive
+    // This is especially important in test environments
+    if (typeof timerId === "object" && timerId !== null && "unref" in timerId) {
+      (timerId as any).unref();
+    }
+    return timerId;
+  }
+
+  /**
+   * Clear the current batch timeout
+   */
+  private clearBatchTimeout(): void {
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+      this.batchTimeout = null;
+    }
+  }
+
+  /**
    * Get relationship for a single account
    * Batches requests automatically
    */
@@ -84,12 +107,11 @@ class RelationshipBatcher {
       this.pendingResolvers.set(accountId, resolvers);
 
       // Clear existing timeout
-      if (this.batchTimeout) {
-        clearTimeout(this.batchTimeout);
-      }
+      this.clearBatchTimeout();
 
       // Set new timeout to process batch
-      this.batchTimeout = setTimeout(() => {
+      this.batchTimeout = this.createTimer(() => {
+        this.batchTimeout = null;
         this.processBatch(client).catch((err) => {
           console.error("[RelationshipBatcher] Error processing batch:", err);
         });
@@ -114,14 +136,13 @@ class RelationshipBatcher {
     const now = Date.now();
     if (now - this.lastBatchTime < this.MAX_BATCH_INTERVAL) {
       // Reschedule for later
-      this.batchTimeout = setTimeout(
-        () => {
-          this.processBatch(client).catch((err) => {
-            console.error("[RelationshipBatcher] Error processing batch:", err);
-          });
-        },
-        this.MAX_BATCH_INTERVAL - (now - this.lastBatchTime),
-      );
+      this.clearBatchTimeout();
+      this.batchTimeout = this.createTimer(() => {
+        this.batchTimeout = null;
+        this.processBatch(client).catch((err) => {
+          console.error("[RelationshipBatcher] Error processing batch:", err);
+        });
+      }, this.MAX_BATCH_INTERVAL - (now - this.lastBatchTime));
       return;
     }
 
@@ -216,7 +237,9 @@ class RelationshipBatcher {
 
     // If there are more items in queue, process them
     if (this.batchQueue.length > 0) {
-      this.batchTimeout = setTimeout(() => {
+      this.clearBatchTimeout();
+      this.batchTimeout = this.createTimer(() => {
+        this.batchTimeout = null;
         this.processBatch(client).catch((err) => {
           console.error("[RelationshipBatcher] Error processing batch:", err);
         });
@@ -269,6 +292,18 @@ class RelationshipBatcher {
       pendingRequests: this.pendingRequests.size,
       queueLength: this.batchQueue.length,
     };
+  }
+
+  /**
+   * Clean up all active timers
+   * Useful for test teardown to prevent leaks
+   */
+  cleanup(): void {
+    this.clearBatchTimeout();
+    // Clear any pending operations
+    this.batchQueue = [];
+    this.pendingRequests.clear();
+    this.pendingResolvers.clear();
   }
 }
 

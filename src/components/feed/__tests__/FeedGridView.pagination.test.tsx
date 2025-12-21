@@ -94,6 +94,7 @@ describe("FeedGridView - Pagination resilience", () => {
     act(() => {
       jest.runOnlyPendingTimers();
     });
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

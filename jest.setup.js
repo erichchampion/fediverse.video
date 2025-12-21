@@ -149,3 +149,30 @@ try {
 } catch (e) {
   // Path may not exist in RN 0.81, ignore
 }
+
+// Global test teardown to clear any remaining timers
+afterAll(() => {
+  // Clean up RequestQueue timers
+  try {
+    const { requestQueue } = require('./src/lib/api/requestQueue');
+    if (requestQueue && typeof requestQueue.cleanup === 'function') {
+      requestQueue.cleanup();
+    }
+  } catch (e) {
+    // Ignore if module not available
+  }
+  
+  // Clean up RelationshipBatcher timers
+  try {
+    const { relationshipBatcher } = require('./src/lib/api/relationshipBatcher');
+    if (relationshipBatcher && typeof relationshipBatcher.cleanup === 'function') {
+      relationshipBatcher.cleanup();
+    }
+  } catch (e) {
+    // Ignore if module not available
+  }
+  
+  // Clear any remaining timers that might be keeping the process alive
+  // This helps prevent "worker process has failed to exit gracefully" warnings
+  jest.clearAllTimers();
+});

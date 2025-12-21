@@ -54,12 +54,25 @@ if (typeof AbortSignal !== "undefined" && !(AbortSignal as any).any) {
 if (typeof AbortSignal !== "undefined" && !(AbortSignal as any).timeout) {
   (AbortSignal as any).timeout = function (milliseconds: number): AbortSignal {
     const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    setTimeout(() => {
-      controller.abort(
-        new Error(`TimeoutError: The operation was aborted due to timeout`),
-      );
+    // Store timeout ID so we can clear it if signal is aborted early
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      if (!controller.signal.aborted) {
+        controller.abort(
+          new Error(`TimeoutError: The operation was aborted due to timeout`),
+        );
+      }
     }, milliseconds);
+
+    // Clear timeout if signal is aborted before timeout
+    controller.signal.addEventListener("abort", () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    });
 
     return controller.signal;
   };

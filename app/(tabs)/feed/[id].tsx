@@ -15,6 +15,7 @@ import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
 import { useFeed } from "@hooks/useFeed";
+import { useFeedViewPreference } from "@hooks/useFeedViewPreference";
 import {
   PostSectionHeader,
   PostSectionContent,
@@ -76,8 +77,8 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
 
   const { feedType, feedId } = parseFeedParams(routeId || "public");
 
-  // View mode state (list or grid)
-  const [isGridView, setIsGridView] = useState(false);
+  // View mode state (list or grid) - persisted across navigation
+  const { isGridView, setIsGridView } = useFeedViewPreference();
   const [gridScrollSignal, setGridScrollSignal] = useState(0);
 
   // Track view transition state (for smooth transitions when switching views)

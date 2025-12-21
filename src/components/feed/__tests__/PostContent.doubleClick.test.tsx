@@ -98,7 +98,10 @@ describe("PostContent double-click handling", () => {
   });
 
   afterEach(() => {
+    // Run all pending timers before switching back to real timers
     jest.runOnlyPendingTimers();
+    // Clear any remaining timers
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

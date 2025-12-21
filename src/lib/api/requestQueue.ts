@@ -33,12 +33,30 @@ export class RequestQueue {
   private isRateLimited = false;
   private rateLimitUntil = 0;
   private requestCache = new Map<string, Promise<any>>();
+  private activeTimers = new Set<ReturnType<typeof setTimeout>>();
 
   private readonly maxConcurrent = REQUEST_QUEUE_CONFIG.MAX_CONCURRENT_REQUESTS;
   private readonly requestDelay = REQUEST_QUEUE_CONFIG.REQUEST_DELAY;
   private readonly rateLimitDelay = REQUEST_QUEUE_CONFIG.RATE_LIMIT_DELAY;
   private readonly maxRetries = REQUEST_QUEUE_CONFIG.MAX_RETRIES;
   private readonly retryBackoff = REQUEST_QUEUE_CONFIG.RETRY_BACKOFF;
+
+  /**
+   * Track and return a timer ID
+   */
+  private createTimer(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
+    const timerId = setTimeout(() => {
+      this.activeTimers.delete(timerId);
+      callback();
+    }, delay);
+    this.activeTimers.add(timerId);
+    // Use .unref() to prevent timers from keeping the process alive
+    // This is especially important in test environments
+    if (typeof timerId === "object" && timerId !== null && "unref" in timerId) {
+      (timerId as any).unref();
+    }
+    return timerId;
+  }
 
   /**
    * Add request to queue
@@ -89,7 +107,7 @@ export class RequestQueue {
 
       // Clear cache after completion
       promise.finally(() => {
-        setTimeout(
+        this.createTimer(
           () => this.requestCache.delete(cacheKey),
           REQUEST_CACHE_CONFIG.CLEAR_DELAY,
         );
@@ -115,7 +133,7 @@ export class RequestQueue {
     if (this.isRateLimited && Date.now() < this.rateLimitUntil) {
       const delay = this.rateLimitUntil - Date.now();
       console.warn(`[RequestQueue] Rate limited, waiting ${delay}ms`);
-      setTimeout(() => {
+      this.createTimer(() => {
         this.isRateLimited = false;
         this.processQueue();
       }, delay);
@@ -125,7 +143,7 @@ export class RequestQueue {
     // Check request delay
     const timeSinceLastRequest = Date.now() - this.lastRequestTime;
     if (timeSinceLastRequest < this.requestDelay) {
-      setTimeout(
+      this.createTimer(
         () => this.processQueue(),
         this.requestDelay - timeSinceLastRequest,
       );
@@ -185,7 +203,7 @@ export class RequestQueue {
         `[RequestQueue] Retrying request (attempt ${request.retries}/${this.maxRetries}) after ${delay}ms`,
       );
 
-      setTimeout(() => {
+      this.createTimer(() => {
         this.queue.unshift(request); // Put back at front of queue
         this.processQueue();
       }, delay);
@@ -250,6 +268,18 @@ export class RequestQueue {
     }
     this.queue = [];
     this.requestCache.clear();
+    this.cleanup();
+  }
+
+  /**
+   * Clean up all active timers
+   * Useful for test teardown to prevent leaks
+   */
+  cleanup(): void {
+    for (const timerId of this.activeTimers) {
+      clearTimeout(timerId);
+    }
+    this.activeTimers.clear();
   }
 
   /**
@@ -274,9 +304,13 @@ export class RequestQueue {
    */
   async drain(): Promise<void> {
     while (this.queue.length > 0 || this.activeRequests > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, REQUEST_CACHE_CONFIG.DRAIN_CHECK_INTERVAL),
-      );
+      await new Promise((resolve) => {
+        const timerId = setTimeout(() => {
+          this.activeTimers.delete(timerId);
+          resolve(undefined);
+        }, REQUEST_CACHE_CONFIG.DRAIN_CHECK_INTERVAL);
+        this.activeTimers.add(timerId);
+      });
     }
   }
 

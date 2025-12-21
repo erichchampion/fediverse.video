@@ -108,6 +108,7 @@ describe("FeedGridView - Double-Click Favorite Toggle", () => {
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

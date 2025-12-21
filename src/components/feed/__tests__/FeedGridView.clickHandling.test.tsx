@@ -214,6 +214,7 @@ describe("FeedGridView - Click Handling", () => {
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

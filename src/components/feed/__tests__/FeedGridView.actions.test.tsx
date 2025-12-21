@@ -117,6 +117,7 @@ describe("FeedGridView - Simplified Actions", () => {
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
