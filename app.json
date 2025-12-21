@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "Fediverse Video",
+    "slug": "mastodon-video",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "fediverse.video",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6364FF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "video.fediverse",
+      "buildNumber": "2",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow Fediverse Video to access your photos to upload media",
+        "NSCameraUsageDescription": "Allow Fediverse Video to use your camera to take photos and videos"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "server",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Fediverse Video to access your photos to upload media",
+          "cameraPermission": "Allow Fediverse Video to use your camera to take photos and videos"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "developmentTeam": "KA5A6NN3PD",
+            "bitcode": false,
+            "debugInformationFormat": "dwarf-with-dsym",
+            "stripDebugSymbolsDuringCopy": false,
+            "useFrameworks": "static"  // keep if you already need frameworks; otherwise omit
+          }
+        }
+      ],
+      "expo-video"
+    ],
+    "experiments": {
+      "baseUrl": "/fediverse.video",
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "80ed5dee-ca5b-4513-8e26-b42a5dc50f67"
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "video.fediverse"
+    },
+    "owner": "mastodonvideo"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@mastodon-video/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Fediverse.Video web and mobile apps",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "exports": {
+    ".": "./index.ts",
+    "./user": "./user.ts",
+    "./media": "./media.ts",
+    "./post": "./post.ts",
+    "./instance": "./instance.ts",
+    "./auth": "./auth.ts",
+    "./feed": "./feed.ts"
+  }
+}

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+.expo/
+coverage/
+
+# Native projects
+ios/
+android/
+
+# Generated files
+*.log
+*.tsbuildinfo
+
+# Test artifacts
+coverage/
+
+# Documentation
+*.md
+!README.md
+
+# Config files
+babel.config.js
+metro.config.js
+jest.setup.js
+
+# Type definitions
+expo-env.d.ts
+*.d.ts
+
+# Shared types (if not needed)
+shared/
+
