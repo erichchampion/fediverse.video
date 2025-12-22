@@ -375,10 +375,11 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
   const renderPost = useCallback(
     (post: Post, index: number) => {
       if (!post || !post.id) return null;
-      
-      // Use ref for visibility to avoid re-renders
-      const isVisible = visibleSectionsRef.current.has(post.id);
-      
+
+      // Use state for visibility to enable re-renders when visibility changes
+      // This ensures videos autoplay and media loads when posts scroll into view
+      const isVisible = visibleSections.has(post.id);
+
       return (
         <View
           key={post.id}
@@ -400,7 +401,7 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
         </View>
       );
     },
-    [handlePostDelete, handlePostLayout, handlePostUpdate],
+    [handlePostDelete, handlePostLayout, handlePostUpdate, visibleSections],
   );
 
   // Render footer (loading more indicator) - memoized

@@ -49,6 +49,7 @@ export const UI_CONFIG = {
   SCROLL_DEBOUNCE_DELAY: 1000, // ms
   SCROLL_RECOVERY_DELAY: 100, // ms
   SCROLL_RESTORE_MAX_ATTEMPTS: 3, // number of retries when waiting for layout measurement
+  PROACTIVE_LOAD_CHECK_INTERVAL: 1000, // ms - interval for checking visible posts changes for proactive loading
 } as const;
 
 export const VIRTUAL_SCROLL_UI_CONFIG = {

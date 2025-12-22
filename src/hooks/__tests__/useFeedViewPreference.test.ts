@@ -303,6 +303,60 @@ describe("useFeedViewPreference", () => {
         STORAGE_KEYS.GRID_VIEW_PREFERENCE,
       );
     });
+
+    it("should reset to default grid view immediately when instance changes", async () => {
+      const firstInstanceId = "https://mastodon.social@user123";
+      const secondInstanceId = "https://other.instance@user456";
+
+      (useAuth as jest.Mock).mockReturnValue({
+        instance: {
+          id: firstInstanceId,
+          url: "https://mastodon.social",
+        },
+      });
+
+      (storageService.getPreference as jest.Mock).mockResolvedValue(false);
+
+      const { result, rerender } = renderHook(() => useFeedViewPreference());
+
+      await waitFor(() => {
+        expect(result.current.isGridView).toBe(false);
+      });
+
+      // Switch instance - should immediately reset to default (true) before loading
+      (useAuth as jest.Mock).mockReturnValue({
+        instance: {
+          id: secondInstanceId,
+          url: "https://other.instance",
+        },
+      });
+
+      // Simulate slow storage read (using a more robust delay for test stability)
+      const STORAGE_DELAY_MS = 200;
+      (storageService.getPreference as jest.Mock).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve(false), STORAGE_DELAY_MS),
+          ),
+      );
+
+      rerender();
+
+      // Should reset to default (true) immediately, not keep old value (false)
+      // This prevents showing the wrong view during the loading period
+      expect(result.current.isGridView).toBe(true);
+      expect(result.current.isLoading).toBe(true);
+
+      // After loading completes, should have the new instance's preference
+      await waitFor(() => {
+        expect(result.current.isGridView).toBe(false);
+      });
+
+      expect(storageService.getPreference).toHaveBeenCalledWith(
+        secondInstanceId,
+        STORAGE_KEYS.GRID_VIEW_PREFERENCE,
+      );
+    });
   });
 });
 

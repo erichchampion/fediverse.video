@@ -11,6 +11,7 @@ import { PostHeader } from "./PostHeader";
 import { PostContent } from "./PostContent";
 import { CommentsSection } from "./CommentsSection";
 import { getDisplayPost, stripHtml } from "@lib/api/timeline";
+import { haveMediaAttachmentsChanged } from "@lib/utils/postComparison";
 
 /**
  * Post Section Component
@@ -151,18 +152,23 @@ const areContentPropsEqual = (
   prevProps: PostSectionData,
   nextProps: PostSectionData,
 ) => {
-  // Only re-render if post ID, content, or interactive state has changed
+  // Check if media attachments changed using shared utility
+  const mediaChanged = haveMediaAttachmentsChanged(
+    prevProps.post.mediaAttachments,
+    nextProps.post.mediaAttachments,
+  );
+
+  // Only re-render if post ID, content, media, or interactive state has changed
   return (
     prevProps.post.id === nextProps.post.id &&
     prevProps.post.content === nextProps.post.content &&
+    !mediaChanged &&
     prevProps.post.favourited === nextProps.post.favourited &&
     prevProps.post.reblogged === nextProps.post.reblogged &&
     prevProps.post.bookmarked === nextProps.post.bookmarked &&
     prevProps.post.favouritesCount === nextProps.post.favouritesCount &&
     prevProps.post.reblogsCount === nextProps.post.reblogsCount &&
     prevProps.post.repliesCount === nextProps.post.repliesCount &&
-    prevProps.post.mediaAttachments.length ===
-      nextProps.post.mediaAttachments.length &&
     prevProps.onPress === nextProps.onPress &&
     prevProps.onUpdate === nextProps.onUpdate &&
     prevProps.onDelete === nextProps.onDelete &&

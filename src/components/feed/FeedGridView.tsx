@@ -515,11 +515,9 @@ export function FeedGridView({
           // Mark that we've scrolled to this post
           lastScrolledToPostIdRef.current = scrollToPostId;
         }, UI_CONFIG.SCROLL_RECOVERY_DELAY);
-      } else {
-        // Post not found yet (might load later with pagination)
-        // Mark as scrolled anyway to prevent infinite retries
-        lastScrolledToPostIdRef.current = scrollToPostId;
       }
+      // If post not found, don't mark as scrolled - allow retry when new items load via pagination
+      // The effect will re-run when gridItems changes, enabling automatic retry
     }
   }, [scrollToPostId, gridItems, columns]);
 
@@ -770,8 +768,8 @@ export function FeedGridView({
       const now = Date.now();
       const timeSinceLastUpdate = now - lastVisibilityUpdateRef.current;
 
-      // Update visibility every 500ms to balance performance and responsiveness
-      if (timeSinceLastUpdate >= 500) {
+      // Update visibility at same interval as list view for consistent behavior
+      if (timeSinceLastUpdate >= UI_CONFIG.VISIBILITY_UPDATE_INTERVAL) {
         lastVisibilityUpdateRef.current = now;
 
         const newVisibleItems = calculateVisibleItems(scrollY, viewportHeight);
@@ -797,7 +795,11 @@ export function FeedGridView({
         // Check if visible posts changed and call proactive loading callback
         const timeSinceLastProactiveCheck =
           now - lastProactiveLoadCheckRef.current;
-        if (timeSinceLastProactiveCheck >= 1000 && onViewableItemsChanged) {
+        if (
+          timeSinceLastProactiveCheck >=
+            UI_CONFIG.PROACTIVE_LOAD_CHECK_INTERVAL &&
+          onViewableItemsChanged
+        ) {
           const visiblePostsChanged =
             newVisiblePosts.size !== visiblePostsRef.current.size ||
             ![...newVisiblePosts].every((id) =>

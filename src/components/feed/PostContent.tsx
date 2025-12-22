@@ -15,6 +15,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { getPlainTextContent, stripHtml } from "@lib/api/timeline";
 import { LinkCard } from "./LinkCard";
 import { useDelayedClick } from "@hooks/useDelayedClick";
+import { haveMediaAttachmentsChanged } from "@lib/utils/postComparison";
 
 /**
  * Post Content Component
@@ -37,14 +38,19 @@ const arePostContentPropsEqual = (
   prevProps: PostContentProps,
   nextProps: PostContentProps,
 ) => {
+  // Check if media attachments changed using shared utility
+  const mediaChanged = haveMediaAttachmentsChanged(
+    prevProps.post.mediaAttachments,
+    nextProps.post.mediaAttachments,
+  );
+
   // Only re-render if post ID, content, media, or interactive state has changed
   return (
     prevProps.post.id === nextProps.post.id &&
     prevProps.post.content === nextProps.post.content &&
     prevProps.post.spoilerText === nextProps.post.spoilerText &&
     prevProps.post.sensitive === nextProps.post.sensitive &&
-    prevProps.post.mediaAttachments.length ===
-      nextProps.post.mediaAttachments.length &&
+    !mediaChanged &&
     prevProps.post.card === nextProps.post.card &&
     prevProps.onPress === nextProps.onPress &&
     prevProps.onDoubleClick === nextProps.onDoubleClick &&

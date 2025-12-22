@@ -358,7 +358,7 @@ describe("AccountSwitcherScreen - Multi-Account Same-Server", () => {
   });
 
   describe("add account", () => {
-    it('should navigate to login when tapping "Add Another Account"', () => {
+    it('should navigate to instance selector when tapping "Add Another Account"', () => {
       mockUseAuth.mockReturnValue({
         accounts: [mockAccount1],
         instance: mockAccount1.instance,
@@ -370,7 +370,7 @@ describe("AccountSwitcherScreen - Multi-Account Same-Server", () => {
 
       fireEvent.press(getByText("Add Another Account"));
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/(auth)/login");
+      expect(mockRouter.push).toHaveBeenCalledWith("/(auth)/instance-selector");
     });
   });
 

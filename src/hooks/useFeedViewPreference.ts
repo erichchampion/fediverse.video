@@ -20,11 +20,15 @@ export function useFeedViewPreference() {
       return;
     }
 
+    // Reset to default grid view immediately when instance changes
+    // This prevents showing the wrong view during the loading period
+    setIsGridViewState(true);
+    setIsLoading(true);
+
     let isMounted = true;
 
     const loadPreference = async () => {
       try {
-        setIsLoading(true);
         const savedPreference = await storageService.getPreference(
           instance.id,
           STORAGE_KEYS.GRID_VIEW_PREFERENCE,
