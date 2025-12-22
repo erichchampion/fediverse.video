@@ -1,7 +1,7 @@
 {
   "name": "mastodon-video-rn",
   "version": "1.0.0",
-  "description": "Fediverse.video React Native iOS application",
+  "description": "friendlyfediverse.com React Native iOS application",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",

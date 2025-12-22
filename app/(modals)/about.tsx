@@ -3,7 +3,7 @@ import { useTheme } from "@contexts/ThemeContext";
 
 /**
  * About Page
- * Information about fediverse.video
+ * Information about friendlyfediverse.com
  */
 export default function AboutPage() {
   const { colors } = useTheme();
@@ -14,16 +14,16 @@ export default function AboutPage() {
       contentContainerStyle={styles.content}
     >
       <Text style={[styles.title, { color: colors.text }]}>
-        About fediverse.video
+        About friendlyfediverse.com
       </Text>
 
       <Text style={[styles.paragraph, { color: colors.text }]}>
-        fediverse.video is a Mastodon client focused on providing an excellent
+        friendlyfediverse.com is a Mastodon client focused on providing an excellent
         video viewing experience.
       </Text>
 
       <Text style={[styles.paragraph, { color: colors.text }]}>
-        Built with React Native and Expo, fediverse.video brings the power of the
+        Built with React Native and Expo, friendlyfediverse.com brings the power of the
         fediverse to your mobile device.
       </Text>
 
@@ -44,7 +44,7 @@ export default function AboutPage() {
       </Text>
 
       <Text style={[styles.paragraph, { color: colors.text }]}>
-        fediverse.video is open source and built by the community.
+        friendlyfediverse.com is open source and built by the community.
       </Text>
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -55,18 +55,18 @@ export default function AboutPage() {
       </Text>
       <Pressable
         accessibilityRole="link"
-        onPress={() => Linking.openURL("https://www.fediverse.video/support")}
+        onPress={() => Linking.openURL("https://www.friendlyfediverse.com/support")}
       >
         <Text style={[styles.link, { color: colors.accent }]}>
-          Support: fediverse.video/support
+          Support: friendlyfediverse.com/support
         </Text>
       </Pressable>
       <Pressable
         accessibilityRole="link"
-        onPress={() => Linking.openURL("https://www.fediverse.video/privacy")}
+        onPress={() => Linking.openURL("https://www.friendlyfediverse.com/privacy")}
       >
         <Text style={[styles.link, { color: colors.accent }]}>
-          Privacy Policy: fediverse.video/privacy
+          Privacy Policy: friendlyfediverse.com/privacy
         </Text>
       </Pressable>
 
@@ -82,7 +82,7 @@ export default function AboutPage() {
       </Text>
 
       <Text style={[styles.footer, { color: colors.textSecondary }]}>
-        © {new Date().getFullYear()} fediverse.video
+        © {new Date().getFullYear()} friendlyfediverse.com
       </Text>
     </ScrollView>
   );

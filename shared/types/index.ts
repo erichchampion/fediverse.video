@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript types for Fediverse.Video
+ * Shared TypeScript types for friendlyfediverse.com
  *
  * This module provides type definitions used by both the web app
  * and React Native mobile app to ensure consistency across platforms.

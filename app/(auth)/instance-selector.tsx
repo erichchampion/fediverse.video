@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -33,10 +33,21 @@ export default function InstanceSelectorScreen() {
   const [validatingInstance, setValidatingInstance] = useState<string | null>(
     null,
   );
+  const wasLoadingRef = useRef(isLoading);
 
-  // Navigate to home feed when authentication succeeds
+  // Navigate to home feed when login completes successfully
+  // This handles both:
+  // 1. First-time login (isAuthenticated becomes true)
+  // 2. Adding another account (isLoading goes from true to false while already authenticated)
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    // Check if login just completed (isLoading went from true to false)
+    const loginJustCompleted =
+      wasLoadingRef.current && !isLoading && isAuthenticated;
+    
+    // Update ref for next check (must be after the check above)
+    wasLoadingRef.current = isLoading;
+
+    if (loginJustCompleted) {
       router.replace("/(tabs)/feed/home");
     }
   }, [isAuthenticated, isLoading, router]);

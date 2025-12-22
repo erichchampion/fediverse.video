@@ -66,7 +66,7 @@ export default function AccountSwitcherScreen() {
   };
 
   const handleAddAccount = () => {
-    router.push("/(auth)/login");
+    router.push("/(auth)/instance-selector");
   };
 
   return (

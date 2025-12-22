@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'video.fediverse'
+    namespace 'com.friendlyfediverse'
     defaultConfig {
-        applicationId 'video.fediverse'
+        applicationId 'com.friendlyfediverse'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

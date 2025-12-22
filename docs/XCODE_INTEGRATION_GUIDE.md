@@ -215,7 +215,7 @@ eas submit --platform ios
    {
      "expo": {
        "ios": {
-         "bundleIdentifier": "video.fediverse"
+         "bundleIdentifier": "com.friendlyfediverse"
        }
      }
    }
@@ -269,7 +269,7 @@ eas submit --platform ios
 3. **Configure signing**
    - Select target > Signing & Capabilities
    - Set Team: KA5A6NN3PD (from existing project.yml)
-   - Verify Bundle Identifier: video.fediverse
+   - Verify Bundle Identifier: com.friendlyfediverse
 
 4. **Archive for release**
    - Product > Archive
@@ -281,7 +281,7 @@ eas submit --platform ios
 
 ### Approach 1 (Expo-generated):
 ```
-fediverse.video/
+friendlyfediverse.com/
 ├── ios/
 │   ├── mastodon/              # Old WebView project (can archive)
 │   │   ├── project.yml
@@ -300,7 +300,7 @@ fediverse.video/
 
 ### Approach 2 (Manual integration):
 ```
-fediverse.video/
+friendlyfediverse.com/
 ├── ios/
 │   ├── mastodon/              # Updated XcodeGen project
 │   │   ├── project-rn.yml     # Updated configuration ⭐
@@ -365,7 +365,7 @@ Follow the testing guide: `ios/mastodon-rn/TESTING_GUIDE.md`
 - Ensure iOS deployment target matches (18.5)
 
 **3. "Bundle identifier mismatch"**
-- Ensure app.json has `"bundleIdentifier": "video.fediverse"`
+- Ensure app.json has `"bundleIdentifier": "com.friendlyfediverse"`
 - Run `npx expo prebuild --clean` to regenerate
 
 **4. "React Native dependency not found"**

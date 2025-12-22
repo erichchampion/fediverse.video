@@ -16,10 +16,10 @@ export default function PrivacyPage() {
 
       <Pressable
         accessibilityRole="link"
-        onPress={() => Linking.openURL("https://www.fediverse.video/privacy")}
+        onPress={() => Linking.openURL("https://www.friendlyfediverse.com/privacy")}
       >
         <Text style={[styles.link, { color: colors.accent }]}>
-          View the full policy at fediverse.video/privacy
+          View the full policy at friendlyfediverse.com/privacy
         </Text>
       </Pressable>
 
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
         Data Collection
       </Text>
       <Text style={[styles.paragraph, { color: colors.text }]}>
-        fediverse.video is a client application that connects to Mastodon
+        friendlyfediverse.com is a client application that connects to Mastodon
         servers. We do not collect, store, or process your personal data on our
         servers.
       </Text>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         Third-Party Services
       </Text>
       <Text style={[styles.paragraph, { color: colors.text }]}>
-        When you use fediverse.video, you connect directly to Mastodon servers
+        When you use friendlyfediverse.com, you connect directly to Mastodon servers
         operated by third parties. Please review the privacy policy of your
         Mastodon server for information about how they handle your data.
       </Text>

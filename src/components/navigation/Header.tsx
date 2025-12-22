@@ -83,7 +83,7 @@ export function Header({
             </>
           ) : (
             <Text style={[styles.title, { color: colors.text }]}>
-              {title || "Fediverse Video"}
+              {title || "Friendly Fediverse"}
             </Text>
           )}
         </View>

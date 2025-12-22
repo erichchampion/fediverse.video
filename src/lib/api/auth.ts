@@ -43,7 +43,7 @@ export function getRedirectUri(): string {
   // Use AuthSession.makeRedirectUri for Expo SDK 51+
   // This creates a proper redirect URI based on the app's scheme
   const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "fediverse.video",
+    scheme: "friendlyfediverse.com",
     path: "oauth-callback",
   });
 
@@ -69,7 +69,7 @@ export async function registerApp(
       clientName: APP_CONFIG.APP_NAME,
       redirectUris: redirectUri,
       scopes: "read write follow push",
-      website: "https://fediverse.video",
+      website: "https://friendlyfediverse.com",
     });
 
     if (!app.clientId || !app.clientSecret) {

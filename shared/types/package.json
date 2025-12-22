@@ -1,7 +1,7 @@
 {
   "name": "@mastodon-video/shared-types",
   "version": "1.0.0",
-  "description": "Shared TypeScript types for Fediverse.Video web and mobile apps",
+  "description": "Shared TypeScript types for friendlyfediverse.com web and mobile apps",
   "main": "index.ts",
   "types": "index.ts",
   "private": true,

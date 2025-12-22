@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Fediverse Video",
-    "slug": "mastodon-video",
+    "name": "Friendly Fediverse",
+    "slug": "friendly-fediverse",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "fediverse.video",
+    "scheme": "friendlyfediverse.com",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -14,11 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "video.fediverse",
+      "bundleIdentifier": "com.friendlyfediverse",
       "buildNumber": "2",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow Fediverse Video to access your photos to upload media",
-        "NSCameraUsageDescription": "Allow Fediverse Video to use your camera to take photos and videos"
+        "NSPhotoLibraryUsageDescription": "Allow Friendly Fediverse to access your photos to upload media",
+        "NSCameraUsageDescription": "Allow Friendly Fediverse to use your camera to take photos and videos"
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -37,8 +37,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Fediverse Video to access your photos to upload media",
-          "cameraPermission": "Allow Fediverse Video to use your camera to take photos and videos"
+          "photosPermission": "Allow Friendly Fediverse to access your photos to upload media",
+          "cameraPermission": "Allow Friendly Fediverse to use your camera to take photos and videos"
         }
       ],
       [
@@ -56,7 +56,7 @@
       "expo-video"
     ],
     "experiments": {
-      "baseUrl": "/fediverse.video",
+      "baseUrl": "/friendlyfediverse.com",
       "typedRoutes": true
     },
     "extra": {
@@ -71,8 +71,8 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "video.fediverse"
+      "package": "com.friendlyfediverse"
     },
-    "owner": "mastodonvideo"
+    "owner": "friendlyfediverse"
   }
 }

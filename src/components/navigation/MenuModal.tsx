@@ -172,7 +172,7 @@ export function MenuModal({ visible, onClose }: MenuModalProps) {
 
             {/* Copyright */}
             <Text style={[styles.copyright, { color: colors.textSecondary }]}>
-              © {new Date().getFullYear()} fediverse.video
+              © {new Date().getFullYear()} friendlyfediverse.com
             </Text>
             <Text style={[styles.copyright, { color: colors.textSecondary }]}>
               All rights reserved

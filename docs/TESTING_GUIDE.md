@@ -1,4 +1,4 @@
-# Fediverse Video - Testing Guide
+# Friendly Fediverse - Testing Guide
 
 **Version**: 1.0.0
 **Last Updated**: 2025-11-08
@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document provides comprehensive testing guidelines for the Fediverse Video React Native application. It covers manual testing, automated testing strategies, and quality assurance procedures.
+This document provides comprehensive testing guidelines for the Friendly Fediverse React Native application. It covers manual testing, automated testing strategies, and quality assurance procedures.
 
 ---
 

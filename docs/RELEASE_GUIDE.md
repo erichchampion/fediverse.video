@@ -1,4 +1,4 @@
-# Fediverse Video - Release Preparation Guide
+# Friendly Fediverse - Release Preparation Guide
 
 **Version**: 1.0.0
 **Last Updated**: 2025-11-08
@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines the steps required to prepare and release the Fediverse Video React Native application to the App Store.
+This document outlines the steps required to prepare and release the Friendly Fediverse React Native application to the App Store.
 
 ---
 
@@ -161,14 +161,14 @@ npx expo prebuild
 ## App Store Listing
 
 ### App Name
-**Fediverse Video**
+**Friendly Fediverse**
 
 ### Subtitle (30 characters)
 **Video-focused Mastodon client**
 
 ### Description
 ```
-Fediverse Video is a fast, native Mastodon client optimized for video content.
+Friendly Fediverse is a fast, native Mastodon client optimized for video content.
 
 FEATURES:
 • Beautiful, native iOS interface
@@ -197,7 +197,7 @@ ACCESSIBILITY:
 • Dynamic Type support
 • High contrast modes
 
-Join the federated social web with Fediverse Video!
+Join the federated social web with Friendly Fediverse!
 ```
 
 ### Keywords (100 characters)
@@ -207,7 +207,7 @@ mastodon,social,video,fediverse,decentralized,open source,twitter,social network
 
 ### Support URL
 ```
-https://github.com/[your-org]/fediverse.video
+https://github.com/[your-org]/friendlyfediverse.com
 ```
 
 ### Privacy Policy URL
@@ -276,7 +276,7 @@ eas submit --platform ios
 
 ### Beta Tester Instructions
 ```
-Welcome to the Fediverse Video beta!
+Welcome to the Friendly Fediverse beta!
 
 WHAT TO TEST:
 1. Authentication with your Mastodon instance
@@ -333,7 +333,7 @@ Thank you for testing!
 
 ### Version 1.0.0
 ```
-Initial release of Fediverse Video!
+Initial release of Friendly Fediverse!
 
 ✨ NEW FEATURES:
 • Native iOS Mastodon client
@@ -512,7 +512,7 @@ If new version has critical issues:
 ### Support Channels
 - **Email**: support@[your-domain]
 - **Twitter**: @mastodonvideo
-- **GitHub**: github.com/[your-org]/fediverse.video
+- **GitHub**: github.com/[your-org]/friendlyfediverse.com
 - **Mastodon**: @mastodonvideo@mastodon.social
 
 ### Team Contacts

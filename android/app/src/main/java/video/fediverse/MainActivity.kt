@@ -1,4 +1,4 @@
-package video.fediverse
+package com.friendlyfediverse
 
 import android.os.Build
 import android.os.Bundle

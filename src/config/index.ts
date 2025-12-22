@@ -4,9 +4,9 @@
  */
 
 export const APP_CONFIG = {
-  APP_NAME: "Fediverse Video",
+  APP_NAME: "Friendly Fediverse",
   VERSION: "1.0.0",
-  URL_SCHEME: "fediverse.video",
+  URL_SCHEME: "friendlyfediverse.com",
 };
 
 export const API_CONFIG = {

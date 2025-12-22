@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Fediverse Video</string>
+    <string>Friendly Fediverse</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -27,8 +27,8 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>fediverse.video</string>
-          <string>video.fediverse</string>
+          <string>friendlyfediverse.com</string>
+          <string>com.friendlyfediverse</string>
         </array>
       </dict>
     </array>
@@ -48,11 +48,11 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow Fediverse Video to use your camera to take photos and videos</string>
+    <string>Allow Friendly Fediverse to use your camera to take photos and videos</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow Fediverse Video to access your photos to upload media</string>
+    <string>Allow Friendly Fediverse to access your photos to upload media</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

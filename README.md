@@ -1,12 +1,12 @@
-# Fediverse Video - React Native
+# Friendly Fediverse - React Native
 
-A native iOS application for Fediverse.video built with React Native and Expo.
+A native iOS application for friendlyfediverse.com built with React Native and Expo.
 
 ## Status
 
 **Phase 0: Foundation & Setup - COMPLETE** ✅
 
-This is the React Native implementation of the Fediverse.video iOS app, migrating from the WebView-based approach to a fully native solution.
+This is the React Native implementation of the friendlyfediverse.com iOS app, migrating from the WebView-based approach to a fully native solution.
 
 ## Project Structure
 

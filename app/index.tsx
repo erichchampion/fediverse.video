@@ -24,7 +24,7 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Fediverse Video</Text>
+      <Text style={styles.title}>Friendly Fediverse</Text>
       <ActivityIndicator size="large" color="#6364FF" />
       <Text style={styles.subtitle}>Loading...</Text>
     </View>

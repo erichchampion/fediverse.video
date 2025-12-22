@@ -1,4 +1,4 @@
-# Setup Guide - Fediverse Video React Native
+# Setup Guide - Friendly Fediverse React Native
 
 ## Quick Start
 

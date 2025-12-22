@@ -133,7 +133,7 @@ export default function LoginScreen() {
                 <Text
                   style={[styles.welcomeText, { color: colors.textSecondary }]}
                 >
-                  Welcome to Fediverse Video
+                  Welcome to the Friendly Fediverse
                 </Text>
                 <Text
                   style={[
