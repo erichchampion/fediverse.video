@@ -61,6 +61,7 @@ type FeedAction =
       posts: Post[];
       hasMore: boolean;
       trimDirection?: TrimDirection;
+      anchorPostId?: string | null;
     }
   | { type: "LOAD_ERROR"; error: string }
   | { type: "REFRESH_START" }
@@ -85,6 +86,14 @@ type FeedAction =
   | { type: "APPLY_PENDING_NEW_POSTS" }
   | { type: "REMOVE_POST"; postId: string }
   | { type: "SET_POSTS"; posts: Post[]; pendingNewPosts?: Post[] }
+  | { type: "LOAD_FROM_ANCHOR_START" }
+  | {
+      type: "LOAD_FROM_ANCHOR_SUCCESS";
+      posts: Post[];
+      hasMore: boolean;
+      anchorPostId: string;
+    }
+  | { type: "LOAD_FROM_ANCHOR_ERROR"; error: string }
   | { type: "RESET" };
 
 // Reducer for managing feed state
@@ -104,6 +113,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         hasMore: action.hasMore,
         lastFetchedAt: Date.now(),
         error: null,
+        anchorPostId: action.anchorPostId !== undefined ? action.anchorPostId : state.anchorPostId,
       };
     case "LOAD_ERROR":
       return { ...state, isLoading: false, error: action.error };
@@ -121,6 +131,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         hasMore: action.hasMore,
         lastFetchedAt: Date.now(),
         error: null,
+        anchorPostId: null,
       };
     case "REFRESH_ERROR":
       return { ...state, isRefreshing: false, error: action.error };
@@ -181,6 +192,21 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         posts: trimPostsToLimit(action.posts),
         pendingNewPosts: action.pendingNewPosts ?? state.pendingNewPosts,
       };
+    case "LOAD_FROM_ANCHOR_START":
+      return { ...state, isLoading: true, error: null };
+    case "LOAD_FROM_ANCHOR_SUCCESS":
+      return {
+        ...state,
+        posts: trimPostsToLimit(action.posts),
+        pendingNewPosts: [],
+        isLoading: false,
+        hasMore: action.hasMore,
+        lastFetchedAt: Date.now(),
+        error: null,
+        anchorPostId: action.anchorPostId,
+      };
+    case "LOAD_FROM_ANCHOR_ERROR":
+      return { ...state, isLoading: false, error: action.error };
     case "RESET":
       return {
         posts: [],
@@ -191,6 +217,7 @@ function feedReducer(state: FeedState, action: FeedAction): FeedState {
         hasMore: true,
         error: null,
         lastFetchedAt: null,
+        anchorPostId: null,
       };
     default:
       return state;
@@ -216,6 +243,7 @@ export function useFeed(options: UseFeedOptions) {
     hasMore: true,
     error: null,
     lastFetchedAt: null,
+    anchorPostId: null,
   });
 
   // Iterator refs for bidirectional pagination
@@ -443,6 +471,7 @@ export function useFeed(options: UseFeedOptions) {
                 type: "LOAD_SUCCESS",
                 posts: trimPostsToLimit(cached),
                 hasMore: true,
+                anchorPostId: null,
               });
 
               // Fetch fresh data in background
@@ -457,6 +486,7 @@ export function useFeed(options: UseFeedOptions) {
                     type: "LOAD_SUCCESS",
                     posts: boundedPosts,
                     hasMore: freshHasMore,
+                    anchorPostId: null,
                   });
                   if (config.enableCache && config.cacheKey) {
                     storageService
@@ -487,7 +517,7 @@ export function useFeed(options: UseFeedOptions) {
       console.log(
         `[useFeed] load API: ${posts.length} posts, hasMore=${hasMore}`,
       );
-      dispatch({ type: "LOAD_SUCCESS", posts: boundedPosts, hasMore });
+      dispatch({ type: "LOAD_SUCCESS", posts: boundedPosts, hasMore, anchorPostId: null });
 
       // Save to cache
       if (config.enableCache && config.cacheKey) {
@@ -896,6 +926,7 @@ export function useFeed(options: UseFeedOptions) {
           type: "LOAD_SUCCESS",
           posts: boundedPosts,
           hasMore: olderPosts.length > 0,
+          anchorPostId: null,
         });
 
         // Reset iterators after jumpToPost to prevent proactive loading
@@ -939,6 +970,91 @@ export function useFeed(options: UseFeedOptions) {
       loadFeed();
     }
   }, [instance?.id, feedType, feedId]); // Don't include loadFeed or resetIterators!
+
+  /**
+   * Load feed from a specific anchor post
+   * Fetches the post and surrounding context (ancestors/descendants)
+   * This eliminates the need for scroll position estimation
+   */
+  const loadFromAnchor = useCallback(
+    async (postId: string) => {
+      try {
+        console.log(`[useFeed] loadFromAnchor START: postId=${postId}`);
+        dispatch({ type: "LOAD_FROM_ANCHOR_START" });
+
+        // Reset iterators to clear old pagination state
+        resetIterators();
+
+        const activeClient = await getActiveClient();
+        if (!activeClient) {
+          throw new Error("No active client");
+        }
+
+        const { client } = activeClient;
+
+        // Fetch the anchor post itself
+        const anchorStatus = await withRetry(
+          () => client.v1.statuses.$select(postId).fetch(),
+          RequestPriority.NORMAL,
+          `status_${postId}`,
+        );
+        const anchorPost = transformStatus(anchorStatus);
+
+        console.log(`[useFeed] loadFromAnchor: Fetched anchor post ${postId}`);
+
+        // Fetch context (ancestors and descendants)
+        const context = await withRetry(
+          () => client.v1.statuses.$select(postId).context.fetch(),
+          RequestPriority.NORMAL,
+          `context_${postId}`,
+        );
+
+        console.log(
+          `[useFeed] loadFromAnchor: Fetched context - ${context.ancestors.length} ancestors, ${context.descendants.length} descendants`,
+        );
+
+        // Transform ancestors and descendants to Post type
+        const ancestors = context.ancestors.map(transformStatus);
+        const descendants = context.descendants.map(transformStatus);
+
+        // Combine in chronological order (newest first)
+        // descendants are newer than anchor, ancestors are older
+        const posts = [...descendants.reverse(), anchorPost, ...ancestors];
+
+        console.log(
+          `[useFeed] loadFromAnchor COMPLETE: total=${posts.length} posts`,
+        );
+
+        dispatch({
+          type: "LOAD_FROM_ANCHOR_SUCCESS",
+          posts,
+          hasMore: ancestors.length > 0,
+          anchorPostId: postId,
+        });
+
+        // Reset iterators after loading from anchor
+        resetIterators();
+
+        // Save to cache
+        const config = feedConfigRef.current;
+        if (config.enableCache && config.cacheKey) {
+          await storageService
+            .saveCachedPosts(config.cacheKey, posts)
+            .catch((err) => console.error("[useFeed] Cache save error:", err));
+        }
+      } catch (error) {
+        console.error("[useFeed] Error loading from anchor:", error);
+        dispatch({
+          type: "LOAD_FROM_ANCHOR_ERROR",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load from anchor",
+        });
+      }
+    },
+    [resetIterators],
+  );
 
   /**
    * Remove a post from the feed (e.g., after deletion)
@@ -1000,6 +1116,7 @@ export function useFeed(options: UseFeedOptions) {
     applyPendingNewPosts,
     checkForNew,
     jumpToPost,
+    loadFromAnchor,
     reload: loadFeed,
     removePost,
     updatePost,

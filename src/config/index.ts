@@ -50,6 +50,10 @@ export const UI_CONFIG = {
   SCROLL_RECOVERY_DELAY: 100, // ms
   SCROLL_RESTORE_MAX_ATTEMPTS: 3, // number of retries when waiting for layout measurement
   PROACTIVE_LOAD_CHECK_INTERVAL: 1000, // ms - interval for checking visible posts changes for proactive loading
+  // Grid view scroll positioning
+  GRID_SCROLL_PADDING_MAX: 50, // Maximum padding offset in pixels for grid scroll positioning
+  GRID_SCROLL_PADDING_RATIO: 0.05, // 5% of viewport height for grid scroll padding
+  GRID_POSITION_MEASURE_RETRIES: 10, // Number of retries when waiting for grid item position measurement
 } as const;
 
 export const VIRTUAL_SCROLL_UI_CONFIG = {

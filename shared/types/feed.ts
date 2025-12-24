@@ -27,4 +27,5 @@ export interface FeedState {
   hasMore: boolean;
   error: string | null;
   lastFetchedAt: number | null;
+  anchorPostId: string | null;
 }

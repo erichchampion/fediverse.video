@@ -65,6 +65,18 @@ jest.mock('expo-secure-store', () => {
   };
 });
 
+// Mock FlashList with FlatList for testing
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { FlatList } = require('react-native');
+
+  return {
+    FlashList: React.forwardRef((props, ref) => {
+      return <FlatList {...props} ref={ref} />;
+    }),
+  };
+});
+
 jest.mock('expo-linking', () => ({
   createURL: jest.fn(),
   addEventListener: jest.fn(),

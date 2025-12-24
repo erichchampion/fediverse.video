@@ -204,14 +204,20 @@ export function FeedGridView({
   const scrollViewRef = useRef<ScrollView>(null);
   const lastScrollSignalRef = useRef<number | null>(null);
   const lastScrolledToPostIdRef = useRef<string | null>(null); // Track what we've scrolled to
+  const lastScrollContentHeightRef = useRef<number>(0); // Track content height when we last scrolled
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track retry timeout for cleanup
   const [isAtEnd, setIsAtEnd] = useState(false);
 
-  // Store item positions for visibility tracking
+  // Store item positions for visibility tracking (estimated from distributeItemsToColumns)
   const itemPositionsRef = useRef<
     Map<string, { yPosition: number; height: number; columnIndex: number }>
   >(new Map());
   const previousItemPositionsRef = useRef<
     Map<string, { yPosition: number; height: number; columnIndex: number }>
+  >(new Map());
+  // Store actual measured positions from onLayout handlers
+  const actualItemPositionsRef = useRef<
+    Map<string, { y: number; height: number }>
   >(new Map());
   // Persist column choices to avoid reshuffling when items are trimmed/added
   const itemColumnMapRef = useRef<Map<string, number>>(new Map());
@@ -235,6 +241,9 @@ export function FeedGridView({
     return () => {
       if (endReachedResetRef.current) {
         clearTimeout(endReachedResetRef.current);
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
       }
     };
   }, []);
@@ -346,6 +355,23 @@ export function FeedGridView({
 
     return { gridItems: items, columns: distributedColumns };
   }, [posts]);
+
+  // Clean up stale actual positions when items are removed
+  useEffect(() => {
+    const currentIds = new Set(gridItems.map((item) => item.id));
+    // Remove positions for items that no longer exist
+    actualItemPositionsRef.current.forEach((_, itemId) => {
+      if (!currentIds.has(itemId)) {
+        actualItemPositionsRef.current.delete(itemId);
+      }
+    });
+    // Clean up refs as well
+    itemRefsRef.current.forEach((_, itemId) => {
+      if (!currentIds.has(itemId)) {
+        itemRefsRef.current.delete(itemId);
+      }
+    });
+  }, [gridItems]);
 
   // Preserve scroll offset when items are trimmed from the top (e.g., at cap)
   useEffect(() => {
@@ -460,61 +486,97 @@ export function FeedGridView({
   }, [gridItems, calculateVisibleItems]);
 
   // Scroll to target post when switching to grid view
-  // Only scroll once per unique scrollToPostId to prevent re-scrolling on pagination
+  // Allow re-scrolling if content height has increased significantly (layout changed)
   useEffect(() => {
-    // Only scroll if:
+    // Reset lastScrolledToPostIdRef when scrollToPostId changes (new transition)
+    if (scrollToPostId && scrollToPostId !== lastScrolledToPostIdRef.current) {
+      lastScrolledToPostIdRef.current = null;
+      lastScrollContentHeightRef.current = 0;
+    }
+    
+    // Check if we should scroll:
     // 1. scrollToPostId is set
-    // 2. It's different from what we last scrolled to
-    // 3. We have grid items
-    if (
-      scrollToPostId &&
-      scrollToPostId !== lastScrolledToPostIdRef.current &&
+    // 2. We have grid items
+    // 3. Either we haven't scrolled to this post yet, OR content height has increased significantly (layout changed)
+    const contentHeight = lastScrollMetricsRef.current.contentHeight;
+    const contentHeightIncreased = contentHeight > 0 && 
+      lastScrollContentHeightRef.current > 0 &&
+      contentHeight > lastScrollContentHeightRef.current * 1.2; // 20% increase indicates significant layout change
+    
+    const shouldScroll = scrollToPostId &&
       gridItems.length > 0 &&
-      scrollViewRef.current
-    ) {
+      scrollViewRef.current &&
+      (scrollToPostId !== lastScrolledToPostIdRef.current || contentHeightIncreased);
+    
+    if (shouldScroll) {
       // Find the first grid item for this post
       const targetItem = gridItems.find(
         (item) => item.feedItemId === scrollToPostId,
       );
 
       if (targetItem) {
-        // Calculate the approximate vertical offset for this item
-        // We need to find which column it's in and sum up heights before it
-        let offset = 0;
-        let found = false;
-
-        for (
-          let colIndex = 0;
-          colIndex < columns.length && !found;
-          colIndex++
-        ) {
-          let columnOffset = GRID_GAP; // Start with top padding
-
-          for (const item of columns[colIndex]) {
-            if (item.id === targetItem.id) {
-              offset = columnOffset;
-              found = true;
-              break;
-            }
-            columnOffset += getItemHeight(item) + GRID_GAP;
+        // Helper to calculate padding offset for scroll positioning
+        const calculatePaddingOffset = (viewportHeight: number): number => {
+          return Math.min(
+            UI_CONFIG.GRID_SCROLL_PADDING_MAX,
+            viewportHeight * UI_CONFIG.GRID_SCROLL_PADDING_RATIO,
+          );
+        };
+        
+        // Helper to scroll to target item with padding
+        const scrollToItem = (position: { y: number; height: number }) => {
+          const offset = position.y;
+          const viewportHeight = lastScrollMetricsRef.current.viewportHeight || Dimensions.get("window").height;
+          const paddingOffset = calculatePaddingOffset(viewportHeight);
+          const adjustedOffset = Math.max(0, offset - paddingOffset);
+          
+          // Report offset for consumers
+          if (onItemOffset) {
+            onItemOffset(targetItem.feedItemId, offset);
           }
-        }
-
-        // Report offset for consumers (e.g., to cache for list-view restore)
-        if (onItemOffset) {
-          onItemOffset(targetItem.feedItemId, offset);
-        }
-
-        // Scroll to the calculated offset
-        // Use SCROLL_RECOVERY_DELAY to allow layout to settle
-        setTimeout(() => {
+          
           scrollViewRef.current?.scrollTo({
-            y: offset,
+            y: adjustedOffset,
             animated: false,
           });
-          // Mark that we've scrolled to this post
           lastScrolledToPostIdRef.current = scrollToPostId;
-        }, UI_CONFIG.SCROLL_RECOVERY_DELAY);
+          lastScrollContentHeightRef.current = lastScrollMetricsRef.current.contentHeight;
+        };
+        
+        // Check if we have the actual measured position for this item
+        const actualPosition = actualItemPositionsRef.current.get(targetItem.id);
+        
+        if (actualPosition) {
+          // Use actual measured position - this is accurate
+          // Scroll immediately since we have the actual position
+          setTimeout(() => {
+            scrollToItem(actualPosition);
+          }, UI_CONFIG.SCROLL_RECOVERY_DELAY);
+        } else {
+          // Actual position not yet measured - wait for it
+          // Set up a retry mechanism that checks periodically
+          // Retry after a delay to allow layout to complete
+          const maxRetries = UI_CONFIG.GRID_POSITION_MEASURE_RETRIES;
+          const retryDelay = UI_CONFIG.SCROLL_RECOVERY_DELAY;
+          let retryCount = 0;
+          
+          const checkAndScroll = () => {
+            // Clear previous timeout ref
+            retryTimeoutRef.current = null;
+            
+            const measuredPosition = actualItemPositionsRef.current.get(targetItem.id);
+            if (measuredPosition) {
+              // Found it! Scroll now
+              scrollToItem(measuredPosition);
+            } else if (retryCount < maxRetries) {
+              retryCount++;
+              retryTimeoutRef.current = setTimeout(checkAndScroll, retryDelay);
+            }
+          };
+          
+          // Start checking after initial delay
+          retryTimeoutRef.current = setTimeout(checkAndScroll, UI_CONFIG.SCROLL_RECOVERY_DELAY);
+        }
       }
       // If post not found, don't mark as scrolled - allow retry when new items load via pagination
       // The effect will re-run when gridItems changes, enabling automatic retry
@@ -565,6 +627,33 @@ export function FeedGridView({
     [onToggleFavorite, handleItemPress, handleDelayedItemClick],
   );
 
+  // Store refs for items to measure their absolute positions
+  const itemRefsRef = useRef<Map<string, any>>(new Map());
+  
+  // Handler to measure actual item positions using measureInWindow
+  const handleItemLayout = useCallback((itemId: string, ref: any) => {
+    if (!ref) return;
+    
+    // Use measureInWindow to get absolute position, then convert to ScrollView-relative
+    ref.measureInWindow((x: number, y: number, width: number, height: number) => {
+      // We need the position relative to the ScrollView content, not the window
+      // measureInWindow gives us window-relative position
+      // We need to measure the ScrollView's position in window and subtract
+      if (scrollViewRef.current) {
+        scrollViewRef.current.measureInWindow((scrollX: number, scrollY: number) => {
+          // Get current scroll position
+          const scrollOffset = lastScrollMetricsRef.current.scrollY;
+          // Calculate position relative to ScrollView content
+          // y from measureInWindow is window-relative, scrollY is also window-relative
+          // We need content-relative position = (item window y - scrollView window y) + scrollOffset
+          const contentRelativeY = (y - scrollY) + scrollOffset;
+          
+          actualItemPositionsRef.current.set(itemId, { y: contentRelativeY, height });
+        });
+      }
+    });
+  }, []);
+
   const renderItem = useCallback(
     (item: GridItem) => {
       const isItemVisible = visibleItems.has(item.id);
@@ -578,10 +667,20 @@ export function FeedGridView({
         const isVideo =
           item.media.type === "video" || item.media.type === "gifv";
         const itemClickHandler = createItemClickHandler(item);
+        
+        // Store ref for this item
+        const itemRef = (ref: any) => {
+          if (ref) {
+            itemRefsRef.current.set(item.id, ref);
+            // Measure position after ref is set
+            setTimeout(() => handleItemLayout(item.id, ref), 0);
+          }
+        };
 
         return (
           <TouchableOpacity
             key={item.id}
+            ref={itemRef}
             style={[
               styles.gridItem,
               {
@@ -621,9 +720,19 @@ export function FeedGridView({
       if (item.type === "card") {
         const itemClickHandler = createItemClickHandler(item);
 
+        // Store ref for this item
+        const itemRef = (ref: any) => {
+          if (ref) {
+            itemRefsRef.current.set(item.id, ref);
+            // Measure position after ref is set
+            setTimeout(() => handleItemLayout(item.id, ref), 0);
+          }
+        };
+
         return (
           <TouchableOpacity
             key={item.id}
+            ref={itemRef}
             style={[
               styles.gridItem,
               {
@@ -680,9 +789,19 @@ export function FeedGridView({
       // Text-only tile
       const itemClickHandler = createItemClickHandler(item);
 
+      // Store ref for this item
+      const itemRef = (ref: any) => {
+        if (ref) {
+          itemRefsRef.current.set(item.id, ref);
+          // Measure position after ref is set
+          setTimeout(() => handleItemLayout(item.id, ref), 0);
+        }
+      };
+
       return (
         <TouchableOpacity
           key={item.id}
+          ref={itemRef}
           style={[
             styles.gridItem,
             styles.textItem,

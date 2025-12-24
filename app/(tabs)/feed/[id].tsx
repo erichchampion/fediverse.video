@@ -2,7 +2,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   RefreshControl,
   ActivityIndicator,
   Alert,
@@ -11,6 +10,7 @@ import {
   Dimensions,
   type LayoutChangeEvent,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
@@ -24,7 +24,6 @@ import {
 } from "@components/feed";
 import { FloatingButtons } from "@components/base";
 import { UI_CONFIG } from "@/config";
-import { attemptScrollRestore } from "@lib/feed/scrollRestore";
 import { getActiveClient } from "@lib/api/client";
 import { transformStatus } from "@lib/api/timeline";
 import { applyFavouriteStateToPost } from "@lib/feed/favourites";
@@ -86,7 +85,7 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
 
   // Track current visible post ID for scroll position restoration
   const currentPostIdRef = useRef<string | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flashListRef = useRef<FlashList<Post>>(null);
 
   // Simple debounce for pagination
   const lastEndReachedRef = useRef<number>(0);
@@ -103,7 +102,6 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
   const averagePostHeightRef = useRef<number>(
     Dimensions.get("window").height * 0.6,
   ); // runtime-derived fallback
-  const pendingScrollRef = useRef<boolean>(false);
   const prevPostsRef = useRef<Post[]>([]);
   const lastScrollMetricsRef = useRef<{ y: number; viewportHeight: number }>({
     y: 0,
@@ -114,16 +112,11 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
   // Track first visible post for view transitions
   const firstVisiblePostIdRef = useRef<string | null>(null);
 
-  // Helper to clear stale layouts before view transitions
-  const clearLayoutCache = useCallback(() => {
-    postLayoutsRef.current.clear();
-  }, []);
-
   // Helper to scroll with InteractionManager wrapper
   const scrollToPosition = useCallback(
     (y: number, animated: boolean = false) => {
       InteractionManager.runAfterInteractions(() => {
-        scrollViewRef.current?.scrollTo({ y, animated });
+        flashListRef.current?.scrollToOffset({ offset: y, animated });
       });
     },
     [],
@@ -142,6 +135,7 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
     loadMore,
     reload,
     jumpToPost,
+    loadFromAnchor,
     removePost,
     applyPendingNewPosts,
     handleViewableItemsChanged: feedHandleViewableItemsChanged,
@@ -184,6 +178,43 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
     }
   }, [displayPosts]);
 
+  // Phase 1: Estimated layouts for all posts (pre-render)
+  // Pre-populate estimates so scroll calculations work immediately
+  useEffect(() => {
+    displayPosts.forEach((post, index) => {
+      if (!postLayoutsRef.current.has(post.id)) {
+        const estimatedY = index * averagePostHeightRef.current;
+        postLayoutsRef.current.set(post.id, {
+          y: estimatedY,
+          height: averagePostHeightRef.current,
+        });
+      }
+    });
+  }, [displayPosts, isGridView]);
+
+  // Scroll to target post when switching to list view
+  useEffect(() => {
+    if (!isGridView && currentPostIdRef.current && flashListRef.current && displayPosts.length > 0) {
+      const targetPostId = currentPostIdRef.current;
+      const targetIndex = displayPosts.findIndex(
+        (p) => p.id === targetPostId || p.reblog?.id === targetPostId
+      );
+
+      if (targetIndex >= 0) {
+        // Use InteractionManager to scroll after render completes
+        InteractionManager.runAfterInteractions(() => {
+          setTimeout(() => {
+            flashListRef.current?.scrollToIndex({
+              index: targetIndex,
+              animated: false,
+              viewPosition: 0.5, // Center the post in viewport
+            });
+          }, UI_CONFIG.SCROLL_RECOVERY_DELAY);
+        });
+      }
+    }
+  }, [isGridView, displayPosts]);
+
   // Preserve scroll position when posts are trimmed from the top (dropping newest while loading older)
   useEffect(() => {
     const prevPosts = prevPostsRef.current;
@@ -197,7 +228,7 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
       prevPosts[0]?.id && posts[0]?.id && prevPosts[0].id !== posts[0].id;
     const lengthStable = posts.length === prevPosts.length;
 
-    if (firstChanged && lengthStable && !isGridView && scrollViewRef.current) {
+    if (firstChanged && lengthStable && !isGridView && flashListRef.current) {
       const currentIds = new Set(posts.map((p) => p.id));
       const removedIds = prevPosts
         .filter((p) => !currentIds.has(p.id))
@@ -214,8 +245,8 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
 
         if (removedHeight > 0) {
           const { y } = lastScrollMetricsRef.current;
-          scrollViewRef.current.scrollTo({
-            y: Math.max(0, y - removedHeight),
+          flashListRef.current.scrollToOffset({
+            offset: Math.max(0, y - removedHeight),
             animated: false,
           });
         }
@@ -322,12 +353,6 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
       if (viewportHeight > 0) {
         updateVisiblePosts(y, viewportHeight);
       }
-
-      // If a restore is pending and this is the target post, scroll now
-      if (pendingScrollRef.current && currentPostIdRef.current === postId) {
-        pendingScrollRef.current = false;
-        scrollToPosition(layout.y, false);
-      }
     },
     [updateVisiblePosts],
   );
@@ -340,35 +365,9 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
       setGridScrollSignal(Date.now());
     } else {
       // Scroll to top after showing pending posts
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      flashListRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
   }, [pendingNewCount, applyPendingNewPosts, isGridView]);
-
-  const scrollToSavedPostIfAvailable = useCallback(async () => {
-    const targetPostId = currentPostIdRef.current;
-
-    const { outcome, keepPending } = await attemptScrollRestore({
-      targetPostId,
-      postLayouts: postLayoutsRef.current,
-      displayPosts,
-      posts,
-      averagePostHeight: averagePostHeightRef.current,
-      scrollTo: scrollToPosition,
-    });
-
-    if (!keepPending) {
-      pendingScrollRef.current = false;
-    }
-
-    return outcome !== "missing";
-  }, [displayPosts, posts]);
-
-  // Retry pending scroll restoration when posts change in list view
-  useEffect(() => {
-    if (!isGridView && pendingScrollRef.current) {
-      scrollToSavedPostIfAvailable();
-    }
-  }, [isGridView, posts, scrollToSavedPostIfAvailable]);
 
   // Render a single post (header + content)
   // Simplified for ScrollView - no sections needed
@@ -402,6 +401,14 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
       );
     },
     [handlePostDelete, handlePostLayout, handlePostUpdate, visibleSections],
+  );
+
+  // FlashList render item wrapper
+  const renderFlashListItem = useCallback(
+    ({ item, index }: { item: Post; index: number }) => {
+      return renderPost(item, index);
+    },
+    [renderPost],
   );
 
   // Render footer (loading more indicator) - memoized
@@ -490,30 +497,21 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
 
   // Handle view toggle (list <-> grid)
   const handleViewToggle = useCallback(() => {
-    // Save current visible post ID when switching from list view
     if (!isGridView) {
+      // Switching from list to grid: save the first visible post
       const visiblePostId =
         firstVisiblePostIdRef.current ||
         (displayPosts.length > 0 ? displayPosts[0].id : null);
       if (visiblePostId) {
         currentPostIdRef.current = visiblePostId;
       }
+    } else {
+      // Switching from grid to list: clear currentPostIdRef to allow fresh scroll in list view
+      currentPostIdRef.current = null;
     }
 
-    if (isGridView) {
-      // CRITICAL: Clear stale layouts before switching to list view.
-      // The old layouts have wrong y-offsets because posts may have shifted.
-      clearLayoutCache();
-
-      // Switch to list view; handlePostLayout will scroll when target is measured
-      setIsGridView(false);
-      pendingScrollRef.current = true;
-      // Don't call scrollToSavedPostIfAvailable - layouts are not ready yet.
-      return;
-    }
-
-    // Switching from list to grid: just toggle view, data is already shared
-    setIsGridView(true);
+    // Toggle view
+    setIsGridView(!isGridView);
   }, [isGridView, displayPosts]);
 
   // Handle reload
@@ -523,7 +521,7 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
       // Scroll to top after reload in list view
       if (!isGridView && displayPosts.length > 0) {
         setTimeout(() => {
-          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          flashListRef.current?.scrollToOffset({ offset: 0, animated: true });
         }, UI_CONFIG.SCROLL_RECOVERY_DELAY);
       }
     }
@@ -532,21 +530,18 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
   // Handle media press in grid view
   const handleMediaPress = useCallback(
     async (postId: string, mediaIndex: number) => {
-      // CRITICAL: Clear stale layouts before switching to list view.
-      // The old layouts have wrong y-offsets because posts may have shifted.
-      clearLayoutCache();
-
       // Switch to list view
       setIsGridView(false);
-      currentPostIdRef.current = postId;
-      pendingScrollRef.current = true;
 
+      // Save the target post ID for scroll restoration
+      currentPostIdRef.current = postId;
+
+      // Check if post exists in current feed
       const postExists = posts.some(
         (p) => p.id === postId || p.reblog?.id === postId,
       );
 
-      // If the target post isn't in the current slice (e.g., bookmarks/favourites),
-      // fetch it plus surrounding context before attempting to scroll.
+      // If post doesn't exist, fetch it with surrounding context
       if (!postExists && !isJumpingRef.current) {
         isJumpingRef.current = true;
         setIsTransitioning(true);
@@ -559,9 +554,6 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
           setIsTransitioning(false);
         }
       }
-
-      // Don't call scrollToSavedPostIfAvailable here - layouts are not ready yet.
-      // The handlePostLayout callback will scroll when the target post is measured.
     },
     [posts, jumpToPost],
   );
@@ -733,14 +725,20 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
           onViewableItemsChanged={feedHandleViewableItemsChanged}
           scrollToTopSignal={gridScrollSignal}
         />
-      ) : (
-        <ScrollView
-          ref={scrollViewRef}
+      ) : !isTransitioning ? (
+        <FlashList<Post>
+          key={`feed-list-${feedType}-${feedId || 'default'}`}
+          ref={flashListRef}
+          data={displayPosts}
+          renderItem={renderFlashListItem}
+          keyExtractor={(item) => item.id}
+          estimatedItemSize={averagePostHeightRef.current}
+          // Workaround for CellContainer error in Release builds
+          drawDistance={1000}
+          // Scroll behavior
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          contentContainerStyle={
-            displayPosts.length === 0 ? styles.emptyList : undefined
-          }
+          // Refresh
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -749,18 +747,17 @@ export function FeedScreenBase({ routeId }: { routeId: string }) {
               colors={[colors.primary]}
             />
           }
-        >
-          {/* Render all posts */}
-          {displayPosts.length === 0 ? (
-            renderEmpty()
-          ) : (
-            <>
-              {displayPosts.map((post, index) => renderPost(post, index))}
-              {renderFooter()}
-            </>
-          )}
-        </ScrollView>
-      )}
+          // Footer and empty state
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
+          // Performance
+          drawDistance={500}
+          estimatedListSize={{
+            height: Dimensions.get("window").height,
+            width: Dimensions.get("window").width,
+          }}
+        />
+      ) : null}
 
       {/* Floating action buttons */}
       <FloatingButtons
